@@ -1,0 +1,461 @@
+---
+title: "RNA_seq_DEA"
+author: "Maryam"
+date: "2025-05-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::#"DESeq2",force = TRUE)
+BiocManager::install("edgeR",force = TRUE)
+
+```
+
+```{r}
+library(edgeR)
+library(DESeq2)
+```
+now we are reading the data file 
+```{r}
+Coinfection.targets<-read.delim("./data/fileDesc.txt")
+rownames(Coinfection.targets)<-c("Sl1","Sl2","Sl3","Ctr1","Ctr2","Ctr3")
+```
+
+
+```{r}
+dim(Coinfection.orig)
+```
+```{r}
+Coinfection.orig <- readDGE(Coinfection.targets, header=F)
+```
+
+
+```{r}
+head(Coinfection.orig)
+```
+```{r}
+Coinfection.rawCount <- Coinfection.orig$count
+dim(Coinfection.rawCount)
+```
+```{r}
+```
+
+
+```{r}
+sampletype <- factor(c(rep("Sl",3), rep("Ctr", 3)))
+```
+
+#Build meta data frame
+```{r}
+meta <- data.frame(sampletype, row.names = colnames(Coinfection.orig$count))
+```
+
+#check the column name of counts dataframe
+```{r}
+colnames(Coinfection.orig$count)
+```
+#check the rowname of meta dataframe
+```{r}
+rownames(meta)
+```
+#Check that sample names match in both files
+```{r}
+all(colnames(Coinfection.orig$count) %in% rownames(meta))
+```
+#-----------------------------------------
+# Create DESeqDataset object
+#----------------------------------------
+#load the package DESeq2 Create DESEq2 dataset dds
+```{r}
+library(DESeq2)
+dds <- DESeqDataSetFromMatrix(Coinfection.orig, colData = meta, design = ~ sampletype)
+```
+```{r}
+
+```
+
+```{r}
+head(counts(dds))
+```
+#Generate size factors
+```{r}
+dds <- estimateSizeFactors(dds)
+```
+
+```{r}
+sizeFactors(dds)
+```
+#Generate the normalized counts
+
+```{r}
+normalized_counts <- counts(dds, normalized=TRUE)
+```
+
+
+```{r}
+write.csv(normalized_counts, file="./results/coinfection_normalized_counts_DESeq2.csv")
+```
+
+
+```{r}
+rld <- rlog(dds, blind=TRUE)
+```
+
+```{r}
+plotPCA(rld, intgroup="sampletype")
+```
+```{r}
+pdf("./results/PlotPCA_dds.pdf")
+plotPCA(rld, intgroup="sampletype")
+```
+
+```{r}
+pdf("./results/PlotPCA_dds.pdf")
+plotPCA(rld, intgroup="sampletype")
+dev.off()
+```
+#Hierarchical Clustering Heatmap
+
+```{r}
+rld_mat <- assay(rld)
+```
+
+```{r}
+rld_cor <- cor(rld_mat) 
+```
+
+```{r}
+head(rld_cor)
+```
+```{r}
+head(meta)
+```
+
+
+
+```{r}
+install.packages("pheatmap")
+```
+
+
+```{r}
+library(pheatmap)
+pheatmap(rld_cor, annotation = meta)
+```
+
+
+```{r}
+heat.colors <- RColorBrewer::brewer.pal(6, "Blues")
+pheatmap(rld_cor, annotation = meta, color = heat.colors, border_color=NA, fontsize = 10, 
+        fontsize_row = 10, height=20)
+```
+
+
+```{r}
+pdf("./results/PlotHeatmap_dds.pdf")
+heat.colors <- RColorBrewer::brewer.pal(6, "Blues")
+pheatmap(rld_cor, annotation = meta, color = heat.colors, border_color=NA, fontsize = 10, 
+        fontsize_row = 10, height=20)
+```
+
+#Differential expression analysis (DEA) using EdgeR
+
+```{r}
+library(edgeR)
+options(digits=3)
+```
+
+```{r}
+```
+
+
+```{r}
+infection.targets
+```
+
+```{r}
+
+benefit.targets<-read.delim("./data/fileDesc.txt")
+rownames(beneficial.inoculum)<-c("Sl","Sl","Sl","Ctr1","Ctr2","Ctr3")
+
+```
+
+```{r}
+getwd()
+```
+
+```{r}
+library(edgeR)
+options(digits=3)
+```
+
+```{r}
+benefit.targets<-read.delim("./data/fileDesc.txt")
+```
+
+```{r}
+benefit.targets
+```
+
+```{r}
+rownames(benefit.targets)<-c("Sl1","Sl2","Sl3","Ctr1","Ctr2","Ctr3")
+```
+
+```{r}
+benefit.targets
+```
+
+```{r}
+benefitialinnoculum<- readDGE(benefit.targets, header=F)
+```
+
+```{r}
+dim(benefitialinnoculum)
+```
+
+```{r}
+head(benefitialinnoculum)
+```
+
+```{r}
+benefitialinnoculum.rawCount <- benefitialinnoculum$count
+head(benefitialinnoculum.rawCount)
+```
+```{r}
+```
+
+
+```{r}
+install.packages("ggplot2")
+```
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+ggplot(benefitialinnoculum.rawCount) +
+  geom_histogram(aes(x = Sl1), stat = "bin", bins = 200) +
+  xlab("Raw expression counts") +
+  ylab("Number of genes")
+```
+
+```{r}
+png("./results/count distribution.png", res=300, height=1800, width=1800)
+ggplot(benefitialinnoculum.rawCount) +
+  geom_histogram(aes(x = Sl1), stat = "bin", bins = 200) +
+  xlab("Raw expression counts") +
+  ylab("Number of genes")
+dev.off()
+```
+```{r}
+write.csv(benefitialinnoculum.rawCount, file="./results/benefitialinnoculum.rawCounts.csv")
+```
+
+```{r}
+benefitialinnoculum.normCPM <- cpm(calcNormFactors(benefitialinnoculum))
+dim(benefitialinnoculum.normCPM)
+```
+
+```{r}
+head(benefitialinnoculum.normCPM)
+```
+
+```{r}
+write.csv(benefitialinnoculum.normCPM, file="./results/benefitialinnoculum.normCPM.csv")
+```
+
+#Filter counts per million (CPM) out and get smaller size of libraries
+
+
+```{r}
+benefitialinnoculum.filtered <- rowSums(cpm(benefitialinnoculum)>1) >=3
+```
+
+```{r}
+table(benefitialinnoculum.filtered)
+```
+
+```{r}
+benefitialinnoculum$samples$lib.size
+```
+
+```{r}
+benefitialinnoculum <- benefitialinnoculum[benefitialinnoculum.filtered,]
+```
+
+```{r}
+colSums(benefitialinnoculum$counts)
+```
+
+```{r}
+dim(benefitialinnoculum)
+```
+```{r}
+benefitialinnoculum$samples$lib.size <- colSums(benefitialinnoculum$counts)
+benefitialinnoculum$samples
+```
+
+#Count normalization after filter
+
+
+```{r}
+benefitialinnoculum = calcNormFactors(benefitialinnoculum)
+```
+
+```{r}
+benefitialinnoculum$samples
+```
+
+```{r}
+benefitialinnoculum.filtered.normCPM <-cpm(calcNormFactors(benefitialinnoculum))
+```
+
+```{r}
+write.csv(benefitialinnoculum.filtered.normCPM, file="./results/benefitialinnoculum.filtered.normCPM.csv")
+```
+
+#Experimental design Treatment factor
+```{r}
+group<-factor(c('Sl','Sl','Sl',"Ctr","Ctr","Ctr"))
+```
+
+
+```{r}
+benefitialinnoculum.design <- model.matrix(~group)   
+rownames(benefitialinnoculum.design)<-colnames(benefitialinnoculum$counts)
+benefitialinnoculum.design
+```
+
+#Sample-level quality control by multidimensional scaling (MDS)
+
+```{r}
+plotMDS(benefitialinnoculum, main="MDS plot of RNA-Seq", labels=colnames(benefitialinnoculum$counts))
+```
+
+
+```{r}
+png("./results/plotMDS.benefitialinnoculum.png", res=300, height=1800, width=1800)
+plotMDS(benefitialinnoculum, main="MDS plot of benefitialinnoculum RNA-Seq", labels=colnames(benefitialinnoculum$counts))
+dev.off()
+```
+
+#Estimating the common dispersion, trended dispersion, tagwwise dispersion
+
+```{r}
+benefitialinnoculum <- estimateGLMCommonDisp(benefitialinnoculum, benefitialinnoculum.design)
+```
+
+```{r}
+benefitialinnoculum <- estimateGLMTrendedDisp(benefitialinnoculum, benefitialinnoculum.design)
+```
+
+```{r}
+benefitialinnoculum <- estimateGLMTagwiseDisp(benefitialinnoculum, benefitialinnoculum.design)
+```
+
+```{r}
+plotMeanVar(benefitialinnoculum, show.tagwise.vars=T,NBline=T)
+```
+
+```{r}
+plotBCV(benefitialinnoculum)
+```
+
+#Fit DGEList and design matrix to genewise GLM
+
+
+```{r}
+benefitialinnoculum.fit <- glmFit(benefitialinnoculum, benefitialinnoculum.design)
+colnames(benefitialinnoculum.fit)
+```
+
+```{r}
+lrt.Sl_vs_Ctr <- glmLRT(benefitialinnoculum.fit, coef=2) 
+```
+
+```{r}
+t1<-topTags(lrt.Sl_vs_Ctr, n=nrow(benefitialinnoculum))
+head(t1$table)
+```
+
+#Extract number of differentially expressed (DE) genes
+
+```{r}
+summary(decideTests(lrt.Sl_vs_Ctr, adjust.method="BH", p.value=0.05))
+```
+
+```{r}
+nrow(subset(topTags(lrt.Sl_vs_Ctr, n=586)$table,  logFC > 0))
+```
+
+```{r}
+lrt.Sl_vs_Ctr_UP <- subset(topTags(lrt.Sl_vs_Ctr, n=586)$table, logFC > 0)
+```
+
+```{r}
+nrow(subset(topTags(lrt.Sl_vs_Ctr, n=586)$table,  logFC < 0))
+```
+
+```{r}
+lrt.Sl_vs_Ctr_DW <- subset(topTags(lrt.Sl_vs_Ctr, n=586)$table, logFC < 0)
+```
+
+
+
+#Differentially expressed transcripts’ tag
+
+
+```{r}
+DEtags.lrt.Sl_vs_Ctr <- rownames(benefitialinnoculum)[as.logical(decideTests(lrt.Sl_vs_Ctr, adjust.method="BH", p.value=0.05))]
+```
+
+```{r}
+write.csv(lrt.Sl_vs_Ctr_UP, file="./results/lrt.Sl_vs_Ctr_UP.csv")
+write.csv(lrt.Sl_vs_Ctr_DW, file="./results/lrt.Sl_vs_Ctr_DW.csv")
+```
+
+```{r}
+benefitialinnoculum.colSlvsCtr = rep('grey55', nrow(benefitialinnoculum))
+```
+
+```{r}
+benefitialinnoculum.colSlvsCtr[lrt.Sl_vs_Ctr$table$PValue < 0.05 & lrt.Sl_vs_Ctr$table$logFC >0 ] <- "red"
+benefitialinnoculum.colSlvsCtr[lrt.Sl_vs_Ctr$table$PValue < 0.05 & lrt.Sl_vs_Ctr$table$logFC <0 ] <- "blue"
+
+```
+
+```{r}
+par(omi=c(0.1,0.1,0.1,0.1), las=1, cex=0.5, mgp=c(3,1,0), cex.main=1.8, cex.lab=1.4, cex.axis=1.4)
+plotSmear(lrt.Sl_vs_Ctr, de.tags=DEtags.lrt.Sl_vs_Ctr, xlab="log-counts per million (logCPM)", ylab="log2-fold change (log2FC)", main="Sl benefitialinnoculum compared to Control", pch=19, cex=0.4, smearWidth=0.5, panel.first=grid(), smooth.scatter=FALSE, ylim=c(-7,7), yaxs="i")
+```
+
+```{r}
+par(omi=c(0.1,0.1,0.1,0.1), las=1, cex=0.5, mgp=c(3,1,0), cex.main=1.8, cex.lab=1.4, cex.axis=1.4)
+plotSmear(lrt.Sl_vs_Ctr, xlab="log-counts per million (logCPM)", ylab="log2-fold change (log2FC)", main="a benefitialinnoculum compared to Control", smearWidth=0.5, pch=21, cex=0.4, deCol="red", col=benefitialinnoculum.colSlvsCtr, ylim=c(-7,7), yaxs="i")
+abline(h=c(-1,1),col="dodgerblue")
+```
+
+
+```{r}
+abline(h=c(-1,1),col="dodgerblue")
+```
+
+
+
+```{r}
+png("./results/plotSmear.benefitialinnoculumRNAseq.png", res=300, height=1800, width=1800)
+par(omi=c(0.1,0.1,0.1,0.1), las=1, cex=0.5, mgp=c(3,1,0), cex.main=1.8, cex.lab=1.4, cex.axis=1.4)
+plotSmear(lrt.Sl_vs_Ctr, xlab="log-counts per million (logCPM)", ylab="log2-fold change (log2FC)", main="Sl benefitialinnoculum compared to Control", smearWidth=0.5, pch=21, cex=0.4, deCol="red", col=benefitialinnoculum.colSlvsCtr, ylim=c(-7,7), yaxs="i")
+abline(h=c(-1,1),col="dodgerblue")
+dev.off()
+```
+
